@@ -3,29 +3,20 @@ import random
 
 #project plan: tower defense (but like the only defense is the player)
 
-#tower in center of window
-    #hp bar
-
-#player
-    #attack - by running into enemies? 
-
 #enemies
     #waves?
-    #movement
-    #attack
-    #hp 
     #difficulty scaling
         #multiple types?
         #increase stats
-            #dmg, hp, speed
+            #dmg, speed
 
 # Constants
 WIDTH = 800
 HEIGHT = WIDTH*4//5
-
-ENEMY_SIZE = 25 #they'll just be squares
+EDGES = ("N", "S", "E", "W")
 
 # Functions
+#sprites
 def tower_sprite(): # 50x75 p0x
     pattern = [
         "01110000001110000001110000001110000001110000001110",
@@ -236,6 +227,7 @@ def enemy_sprite(): # 25x25 p0x
     
     return img
 
+#player movement
 def move_right(event):
     global player, player_img
     canvas.move(player, p_spd, 0)
@@ -258,34 +250,117 @@ def move_up(event):
 def move_down(event):
     canvas.move(player, 0, p_spd)
 
+#enemy functions
 def add_enemy_wave(num):
+    global wave_clear
     for n in range(num):
-        pass
-        #make enemy -> add to enemies list ///////////////TODO
+        edge = random.choice(EDGES)
+        if edge == "N":
+            x = random.randint(0, WIDTH)
+            y = 0
+        elif edge == "S":
+            x = random.randint(0, WIDTH)
+            y = HEIGHT
+        elif edge == "E":
+            x = 0
+            y = random.randint(0, HEIGHT)
+        elif edge == "W":
+            x = WIDTH
+            y = random.randint(0, HEIGHT)
+        e = canvas.create_image(x, y, image=enemy_img, anchor="center")
+        enemies.append(e)
+    wave_clear = False
 
-def move_enemies():
-    pass
+def move_enemies(e):
+    x, y = canvas.coords(e)
+    
+    if x < WIDTH//2: #east
+        if y < HEIGHT//2: #northeast
+            dx = e_spd//2
+            dy = e_spd//2
+        elif y > HEIGHT//2: #southeast
+            dx = e_spd//2
+            dy = -e_spd//2
+        else:
+            dx = e_spd
+            dy = 0
+    elif x > WIDTH//2: #west
+        if y < HEIGHT//2: #northwest
+            dx = -e_spd//2
+            dy = e_spd//2
+        elif y > HEIGHT//2: #southwest
+            dx = -e_spd//2
+            dy = -e_spd//2
+        else:
+            dx = -e_spd
+            dy = 0
+    elif y < HEIGHT//2: #north
+        dx = 0
+        dy = e_spd
+    elif y > HEIGHT//2: #south
+        dx = 0
+        dy = -e_spd
+    else:
+        return
+    
+    canvas.move(e, dx, dy)
 
+def reverse_move_enemy(e):
+    pass #TODO //////////////////////////////////////////
+
+#generic collision check
 def collision(obj_a, obj_b):
     ax1, ay1, ax2, ay2 = canvas.bbox(obj_a)
     bx1, by1, bx2, by2 = canvas.bbox(obj_b)
 
+    return ax1 < bx2 and ax2 > bx1 and ay1 < by2 and ay2 > by1
+
+#running the game
 def start():
     pass
 
-def gameloop():
-    pass
+def game_loop():
+    global wave_clear, t_hp
+    for e in enemies[:]:
+        move_enemies(e)
+        if collision(e, player):
+            canvas.delete(e)
+            enemies.remove(e)
+        elif collision(e, tower):
+            t_hp -= e_dmg
+            canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45,)
+            #reverse movement of enemy out of tower (so they end up kinda bouncing at the edges of the tower)
+            #while collision(e, tower):
+                #reverse_move_enemy(e) #TODO ////////////////////////////////////////
+
+    
+    if t_hp <= 0:
+        game_over()
+        return
+
+    if len(enemies) == 0:
+        wave_clear = True
+
+
+    root.after(250, game_loop)
+
+def game_over():
+    canvas.delete("all")
+    canvas.create_rectangle(0, 0, WIDTH, HEIGHT, fill="#000000")
+    canvas.create_text(WIDTH//2, HEIGHT//2, text="GAME OVER", fill="#790000", font=("Arial", 50))
 
 # Other Code/ Initial values
-
 enemies = []
 p_spd = 15
 p_dmg = 5
-t_hp = 500
+t_hp_max = 100
+t_hp = t_hp_max
 e_spd = 15
-e_dmg = 5
-e_hp = 5
+e_dmg = 1
+wave_clear = True
+wave_size = 3
 
+#window
 root = tk.Tk()
 root.title("Tower Defense Game")
 
@@ -298,10 +373,17 @@ enemy_img = enemy_sprite()
 
 tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
 player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
+canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
+t_hp_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#A3345F")
 
+#keybinds
 root.bind("w", move_up)
 root.bind("a", move_left)
 root.bind("s", move_down)
 root.bind("d", move_right)
+
+#temp
+add_enemy_wave(wave_size)
+game_loop()
 
 root.mainloop()
