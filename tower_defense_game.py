@@ -1,15 +1,6 @@
 import tkinter as tk
 import random
 
-#project plan: tower defense (but like the only defense is the player)
-
-#enemies
-    #waves?
-    #difficulty scaling
-        #multiple types?
-        #increase stats
-            #dmg, speed
-
 # Constants
 WIDTH = 800
 HEIGHT = WIDTH*4//5
@@ -271,7 +262,7 @@ def add_enemy_wave(num):
         enemies.append(e)
     wave_clear = False
 
-def move_enemies(e):
+def move_enemies(e, dir="center"):
     x, y = canvas.coords(e)
     
     if x < WIDTH//2: #east
@@ -303,10 +294,10 @@ def move_enemies(e):
     else:
         return
     
-    canvas.move(e, dx, dy)
-
-def reverse_move_enemy(e):
-    pass #TODO //////////////////////////////////////////
+    if dir == "center":
+        canvas.move(e, dx, dy)
+    elif dir == "reverse":
+        canvas.move(e, -dx, -dy)
 
 #generic collision check
 def collision(obj_a, obj_b):
@@ -316,13 +307,36 @@ def collision(obj_a, obj_b):
     return ax1 < bx2 and ax2 > bx1 and ay1 < by2 and ay2 > by1
 
 #running the game
-def start():
-    pass
+def start(event):
+    # initial values
+    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_clear, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar
+    if not alive:
+        #reset everything
+        canvas.delete("all")
+
+        enemies = []
+        p_spd = 15
+        p_dmg = 5
+        t_hp_max = 100
+        t_hp = t_hp_max
+        e_spd = 15
+        e_dmg = 1
+        wave_clear = True
+        wave_size = 3
+        wave_num = 0
+        wave_countdown = 10
+        wave_text_size = 25
+
+        tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
+        player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
+        canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
+        t_hp_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#A3345F")
+        
+        wave_start()
 
 def game_loop():
-    global wave_clear, t_hp
+    global wave_clear, t_hp, wave_num
     for e in enemies[:]:
-        move_enemies(e)
         if collision(e, player):
             canvas.delete(e)
             enemies.remove(e)
@@ -330,9 +344,10 @@ def game_loop():
             t_hp -= e_dmg
             canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45,)
             #reverse movement of enemy out of tower (so they end up kinda bouncing at the edges of the tower)
-            #while collision(e, tower):
-                #reverse_move_enemy(e) #TODO ////////////////////////////////////////
-
+            while collision(e, tower):
+                move_enemies(e, "reverse") 
+        else:
+            move_enemies(e)
     
     if t_hp <= 0:
         game_over()
@@ -341,24 +356,40 @@ def game_loop():
     if len(enemies) == 0:
         wave_clear = True
 
+    if wave_clear:
+        wave_num += 1
+        root.after(250, wave_start)
+    else:
+        root.after(250, game_loop)
 
-    root.after(250, game_loop)
+def wave_start():
+    global wave_size, wave_countdown, wave_text_size, wave_clear
+    canvas.delete("countdown")
+    canvas.create_text(WIDTH//2, HEIGHT//4, text=f"Wave {wave_num+1} starts in {wave_countdown}", fill="#FFFFFF", font=("Arial", wave_text_size), tags="countdown")
+    if wave_countdown <= 0:
+        canvas.delete("countdown")
+        wave_size += 2
+        wave_countdown = 10
+        wave_text_size = 25
+        wave_clear = False
+
+        add_enemy_wave(wave_size)
+        game_loop()
+    else:
+        wave_countdown -= 1
+        wave_text_size += 5
+        root.after(1000, wave_start)
 
 def game_over():
+    global alive
     canvas.delete("all")
     canvas.create_rectangle(0, 0, WIDTH, HEIGHT, fill="#000000")
+    canvas.create_text(WIDTH//2, HEIGHT//3, text="Waves Cleared:" + str(wave_num), fill="#7F15A8", font=("Arial", 40))
     canvas.create_text(WIDTH//2, HEIGHT//2, text="GAME OVER", fill="#790000", font=("Arial", 50))
+    canvas.create_text(WIDTH//2, HEIGHT*2//3, text="Press Space to Play Again", fill="#858585", font=("Arial", 35))
+    alive = False
 
-# Other Code/ Initial values
-enemies = []
-p_spd = 15
-p_dmg = 5
-t_hp_max = 100
-t_hp = t_hp_max
-e_spd = 15
-e_dmg = 1
-wave_clear = True
-wave_size = 3
+# Other Code
 
 #window
 root = tk.Tk()
@@ -371,19 +402,16 @@ tower_img = tower_sprite()
 player_img = player_sprite()
 enemy_img = enemy_sprite()
 
-tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
-player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
-canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
-t_hp_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#A3345F")
-
 #keybinds
 root.bind("w", move_up)
 root.bind("a", move_left)
 root.bind("s", move_down)
 root.bind("d", move_right)
+root.bind("<space>", start)
 
-#temp
-add_enemy_wave(wave_size)
-game_loop()
+canvas.create_text(WIDTH//2, HEIGHT//3, text="Tower Wave Defense", fill="#6D1202", font=("Arial", 50))
+canvas.create_text(WIDTH//2, HEIGHT//2, text="Press Space To Start", fill="#B6B6B6", font=("Arial", 60))
+canvas.create_text(WIDTH//2, HEIGHT*2//3, text="W A S D for movement", fill= "#888787", font=("Arial", 30))
+alive = False
 
 root.mainloop()
