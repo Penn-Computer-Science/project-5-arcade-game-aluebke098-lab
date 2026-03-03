@@ -393,7 +393,7 @@ def game_over():
 
 #window
 root = tk.Tk()
-root.title("Tower Defense Game")
+root.title("Tower Wave Defense")
 
 canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="#0B5A00")
 canvas.pack()
