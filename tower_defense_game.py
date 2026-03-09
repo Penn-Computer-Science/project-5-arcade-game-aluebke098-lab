@@ -5,6 +5,7 @@ import random
 WIDTH = 800
 HEIGHT = WIDTH*4//5
 EDGES = ("N", "S", "E", "W")
+UPGRADES = ("max hp up", "full heal", "speed up", "slow enemies", "weaken enemies")
 
 # Functions
 #sprites
@@ -243,7 +244,6 @@ def move_down(event):
 
 #enemy functions
 def add_enemy_wave(num):
-    global wave_clear
     for n in range(num):
         edge = random.choice(EDGES)
         if edge == "N":
@@ -260,7 +260,6 @@ def add_enemy_wave(num):
             y = random.randint(0, HEIGHT)
         e = canvas.create_image(x, y, image=enemy_img, anchor="center")
         enemies.append(e)
-    wave_clear = False
 
 def move_enemies(e, dir="center"):
     x, y = canvas.coords(e)
@@ -309,7 +308,7 @@ def collision(obj_a, obj_b):
 #running the game
 def start(event):
     # initial values
-    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_clear, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar
+    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar, t_max_bar
     if not alive:
         #reset everything
         canvas.delete("all")
@@ -319,9 +318,8 @@ def start(event):
         p_dmg = 5
         t_hp_max = 100
         t_hp = t_hp_max
-        e_spd = 15
-        e_dmg = 1
-        wave_clear = True
+        e_spd = 10
+        e_dmg = 0
         wave_size = 3
         wave_num = 0
         wave_countdown = 10
@@ -329,20 +327,20 @@ def start(event):
 
         tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
         player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
-        canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
+        t_max_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
         t_hp_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#A3345F")
         
         wave_start()
 
 def game_loop():
-    global wave_clear, t_hp, wave_num
+    global t_hp, wave_num
     for e in enemies[:]:
         if collision(e, player):
             canvas.delete(e)
             enemies.remove(e)
         elif collision(e, tower):
             t_hp -= e_dmg
-            canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45,)
+            canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45)
             #reverse movement of enemy out of tower (so they end up kinda bouncing at the edges of the tower)
             while collision(e, tower):
                 move_enemies(e, "reverse") 
@@ -354,16 +352,14 @@ def game_loop():
         return
 
     if len(enemies) == 0:
-        wave_clear = True
-
-    if wave_clear:
+        power_up()
         wave_num += 1
-        root.after(250, wave_start)
+        root.after(1000, wave_start)
     else:
         root.after(250, game_loop)
 
 def wave_start():
-    global wave_size, wave_countdown, wave_text_size, wave_clear
+    global wave_size, wave_countdown, wave_text_size, e_dmg, e_spd
     canvas.delete("countdown")
     canvas.create_text(WIDTH//2, HEIGHT//4, text=f"Wave {wave_num+1} starts in {wave_countdown}", fill="#FFFFFF", font=("Arial", wave_text_size), tags="countdown")
     if wave_countdown <= 0:
@@ -371,7 +367,9 @@ def wave_start():
         wave_size += 2
         wave_countdown = 10
         wave_text_size = 25
-        wave_clear = False
+        if wave_num % 5 == 0:
+            e_dmg += 1
+            e_spd += 5
 
         add_enemy_wave(wave_size)
         game_loop()
@@ -379,6 +377,31 @@ def wave_start():
         wave_countdown -= 1
         wave_text_size += 5
         root.after(1000, wave_start)
+
+def power_up():
+    global t_hp_max, t_hp, p_spd, e_spd, e_dmg
+    power = random.choice(UPGRADES)
+    canvas.create_text(WIDTH//2, HEIGHT*3//4, text=f"wave clear power up: {power}", fill="#3ACCF0", font=("Arial", 24), tags="countdown")
+    if power == "full heal":
+        t_hp = t_hp_max
+        canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45)
+    elif power == "max hp up":
+        t_hp_max += 20
+        t_hp += 20
+        canvas.coords(t_max_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45,)
+        canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45,)
+    elif power == "speed up":
+        p_spd += 5
+    elif power == "slow enemies":
+        e_spd -= 5
+        if e_spd < 5:
+            e_spd = 5
+    elif power == "weaken enemies":
+        e_dmg -= 1
+        if e_dmg < 1:
+            e_dmg = 1
+    else:
+        return
 
 def game_over():
     global alive
