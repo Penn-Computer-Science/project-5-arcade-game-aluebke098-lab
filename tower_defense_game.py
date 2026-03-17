@@ -1,11 +1,10 @@
 import tkinter as tk
 import random
 
-# Constants
+# Constants 
 WIDTH = 800
 HEIGHT = WIDTH*4//5
 EDGES = ("N", "S", "E", "W")
-UPGRADES = ("max hp up", "full heal", "speed up", "slow enemies", "weaken enemies")
 
 # Functions
 #sprites
@@ -184,6 +183,7 @@ def tower_sprite(dead=False): # 50x75 p0x
     return img
 
 def player_sprite(dir="right"): # 25x25 p0x
+    # global p_size
     if dir == "right":
         pattern = [
             "0000000000111110000000000",
@@ -244,16 +244,24 @@ def player_sprite(dir="right"): # 25x25 p0x
     h = len(pattern)
     w = len(pattern[0])
 
-    img = tk.PhotoImage(width=w, height=h)
-
+    img = tk.PhotoImage(width=w*p_size, height=h*p_size)
+    
     for y in range(h):
         for x in range(w):
+            yes = True
             if pattern[y][x] == "1":
-                img.put("#1E114E", (x,y))
+                color = "#1E114E"
             elif pattern[y][x] == "2":
-                img.put("#1DE4D3", (x,y))
+                color = "#1DE4D3"
             elif pattern[y][x] == "3":
-                img.put("#747474", (x,y))
+                color = "#747474"
+            else:
+                yes = False
+            
+            if yes:
+                for x2 in range(p_size):
+                    for y2 in range(p_size):
+                        img.put(color, (x*p_size+x2, y*p_size+y2))
     
     return img
 
@@ -389,7 +397,7 @@ def collision(obj_a, obj_b):
 #running the game
 def start(event):
     # initial values
-    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar, t_max_bar
+    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar, t_max_bar, p_size, upgrades
     if not alive:
         #reset everything
         canvas.delete("all")
@@ -397,6 +405,7 @@ def start(event):
         enemies = []
         p_spd = 15
         p_dmg = 5
+        p_size = 1
         t_hp_max = 100
         t_hp = t_hp_max
         e_spd = 10
@@ -405,6 +414,7 @@ def start(event):
         wave_num = 0
         wave_countdown = 10
         wave_text_size = 25
+        upgrades = ["max hp up", "full heal", "speed up", "slow enemies", "weaken enemies", "big"]
 
         tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
         player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
@@ -460,8 +470,8 @@ def wave_start():
         root.after(1000, wave_start)
 
 def power_up():
-    global t_hp_max, t_hp, p_spd, e_spd, e_dmg
-    power = random.choice(UPGRADES)
+    global t_hp_max, t_hp, p_spd, e_spd, e_dmg, p_size, player, player_img
+    power = random.choice(upgrades)
     canvas.create_text(WIDTH//2, HEIGHT*3//4, text=f"wave clear power up: {power}", fill="#3ACCF0", font=("Arial", 24), tags="countdown")
     if power == "full heal":
         t_hp = t_hp_max
@@ -474,13 +484,14 @@ def power_up():
     elif power == "speed up":
         p_spd += 5
     elif power == "slow enemies":
-        e_spd -= 5
-        if e_spd < 5:
-            e_spd = 5
+        if e_spd >= 10:
+            e_spd -= 5
     elif power == "weaken enemies":
-        e_dmg -= 1
-        if e_dmg < 1:
-            e_dmg = 1
+        if e_dmg > 1:
+            e_dmg -= 1
+    elif power == "big":
+        p_size += 1
+        upgrades.remove("big")
     else:
         return
 
@@ -506,6 +517,8 @@ root.title("Tower Wave Defense")
 
 canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="#0B5A00")
 canvas.pack()
+
+p_size = 1
 
 tower_img = tower_sprite()
 player_img = player_sprite()
