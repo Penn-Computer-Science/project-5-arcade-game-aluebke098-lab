@@ -397,10 +397,11 @@ def collision(obj_a, obj_b):
 #running the game
 def start(event):
     # initial values
-    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar, t_max_bar, p_size, upgrades
+    global enemies, p_spd, p_dmg, t_hp_max, t_hp, e_spd, e_dmg, wave_size, wave_num, wave_countdown, wave_text_size, tower, player, t_hp_bar, t_max_bar, p_size, upgrades, alive, tower_img, score
     if not alive:
         #reset everything
         canvas.delete("all")
+        alive = True
 
         enemies = []
         p_spd = 15
@@ -415,7 +416,9 @@ def start(event):
         wave_countdown = 10
         wave_text_size = 25
         upgrades = ["max hp up", "full heal", "speed up", "slow enemies", "weaken enemies", "big"]
+        score = 0
 
+        tower_img = tower_sprite()
         tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
         player = canvas.create_image(WIDTH//2, HEIGHT*3//5, image=player_img, anchor="center")
         t_max_bar = canvas.create_rectangle(WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2+t_hp_max//2, HEIGHT//2-45, fill="#494949")
@@ -424,11 +427,12 @@ def start(event):
         wave_start()
 
 def game_loop():
-    global t_hp, wave_num
+    global t_hp, wave_num, score
     for e in enemies[:]:
         if collision(e, player):
             canvas.delete(e)
             enemies.remove(e)
+            score += 1
         elif collision(e, tower):
             t_hp -= e_dmg
             canvas.coords(t_hp_bar, WIDTH//2-t_hp_max//2, HEIGHT//2-50, WIDTH//2-t_hp_max//2+t_hp, HEIGHT//2-45)
@@ -503,9 +507,10 @@ def game_over():
     tower_img = tower_sprite(True)
     tower = canvas.create_image(WIDTH//2, HEIGHT//2, image=tower_img, anchor="center")
 
-    canvas.create_text(WIDTH//2, HEIGHT//4, text="GAME OVER", fill="#790000", font=("Arial", 50))
+    canvas.create_text(WIDTH//2, HEIGHT//4 + 50, text="GAME OVER", fill="#790000", font=("Arial", 50))
+    canvas.create_text(WIDTH//2, HEIGHT//4, text="Press Space to Play Again", fill="#858585", font=("Arial", 30))
     canvas.create_text(WIDTH//2, HEIGHT*3//4, text="Waves Cleared: " + str(wave_num), fill="#7F15A8", font=("Arial", 40))
-    canvas.create_text(WIDTH//2, HEIGHT*3//4 + 45, text="Press Space to Play Again", fill="#858585", font=("Arial", 30))
+    canvas.create_text(WIDTH//2, HEIGHT*3//4 + 40, text="Enemies Defeated: " + str(score), fill="#7F15A8", font=("Arial", 40))
 
     alive = False
 
@@ -520,7 +525,6 @@ canvas.pack()
 
 p_size = 1
 
-tower_img = tower_sprite()
 player_img = player_sprite()
 enemy_img = enemy_sprite()
 
